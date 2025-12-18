@@ -64,3 +64,31 @@ export interface DashboardMetrics {
   totalPending: number;
   averageProcessingTime: number;
 }
+
+// Support Tickets
+export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type TicketStatus = 'open' | 'in_progress' | 'waiting_response' | 'resolved' | 'closed';
+export type TicketCategory = 'bug' | 'feature' | 'question' | 'billing' | 'other';
+
+export interface TicketMessage {
+  id: string;
+  ticketId: string;
+  content: string;
+  isSupport: boolean;
+  createdAt: Date;
+  attachments?: string[];
+}
+
+export interface Ticket {
+  id: string;
+  subject: string;
+  description: string;
+  category: TicketCategory;
+  priority: TicketPriority;
+  status: TicketStatus;
+  companyId?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  resolvedAt?: Date;
+  messages: TicketMessage[];
+}
