@@ -7,6 +7,7 @@ import {
   Download,
   Settings,
   FileText,
+  HelpCircle,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -32,6 +33,7 @@ const mainMenuItems = [
 ];
 
 const secondaryMenuItems = [
+  { title: 'Suporte', url: '/suporte', icon: HelpCircle },
   { title: 'Configurações', url: '/configuracoes', icon: Settings },
 ];
 
