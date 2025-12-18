@@ -3,24 +3,42 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
+import { CompanyProvider } from "@/contexts/CompanyContext";
+import { NotificationProvider } from "@/contexts/NotificationContext";
+import { AppLayout } from "@/components/layout/AppLayout";
+import Dashboard from "@/pages/Dashboard";
+import Companies from "@/pages/Companies";
+import Upload from "@/pages/Upload";
+import Processing from "@/pages/Processing";
+import Downloads from "@/pages/Downloads";
+import Settings from "@/pages/Settings";
+import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <CompanyProvider>
+      <NotificationProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route element={<AppLayout />}>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/empresas" element={<Companies />} />
+                <Route path="/upload" element={<Upload />} />
+                <Route path="/processamento" element={<Processing />} />
+                <Route path="/downloads" element={<Downloads />} />
+                <Route path="/configuracoes" element={<Settings />} />
+              </Route>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </NotificationProvider>
+    </CompanyProvider>
   </QueryClientProvider>
 );
 
