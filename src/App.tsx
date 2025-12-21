@@ -14,6 +14,7 @@ import Processing from "@/pages/Processing";
 import Downloads from "@/pages/Downloads";
 import Settings from "@/pages/Settings";
 import Tickets from "@/pages/Tickets";
+import AdminTickets from "@/pages/AdminTickets";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
                   <Route path="/downloads" element={<Downloads />} />
                   <Route path="/configuracoes" element={<Settings />} />
                   <Route path="/suporte" element={<Tickets />} />
+                  <Route path="/admin/suporte" element={<AdminTickets />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
