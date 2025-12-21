@@ -8,6 +8,7 @@ import {
   Settings,
   FileText,
   HelpCircle,
+  ShieldCheck,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -34,6 +35,7 @@ const mainMenuItems = [
 
 const secondaryMenuItems = [
   { title: 'Suporte', url: '/suporte', icon: HelpCircle },
+  { title: 'Admin Suporte', url: '/admin/suporte', icon: ShieldCheck },
   { title: 'Configurações', url: '/configuracoes', icon: Settings },
 ];
 
