@@ -7,6 +7,7 @@ import { CompanyProvider } from "@/contexts/CompanyContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { TicketProvider } from "@/contexts/TicketContext";
 import { AppLayout } from "@/components/layout/AppLayout";
+import HomePage from "@/pages/HomePage";
 import Dashboard from "@/pages/Dashboard";
 import Companies from "@/pages/Companies";
 import Upload from "@/pages/Upload";
@@ -29,8 +30,9 @@ const App = () => (
             <Sonner />
             <BrowserRouter>
               <Routes>
+                <Route path="/" element={<HomePage />} />
                 <Route element={<AppLayout />}>
-                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/empresas" element={<Companies />} />
                   <Route path="/upload" element={<Upload />} />
                   <Route path="/processamento" element={<Processing />} />
