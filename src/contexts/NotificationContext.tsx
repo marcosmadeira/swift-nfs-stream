@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { Notification } from '@/types';
 
 interface NotificationContextType {
@@ -11,6 +11,8 @@ interface NotificationContextType {
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
+
+const STORAGE_KEY = 'alivee_notifications';
 
 const initialNotifications: Notification[] = [
   {
@@ -42,10 +44,39 @@ const initialNotifications: Notification[] = [
   },
 ];
 
+const loadNotificationsFromStorage = (): Notification[] => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return parsed.map((n: any) => ({
+        ...n,
+        createdAt: new Date(n.createdAt),
+      }));
+    }
+  } catch (error) {
+    console.error('Error loading notifications from localStorage:', error);
+  }
+  return initialNotifications;
+};
+
+const saveNotificationsToStorage = (notifications: Notification[]) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(notifications));
+  } catch (error) {
+    console.error('Error saving notifications to localStorage:', error);
+  }
+};
+
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
-  const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>(() => loadNotificationsFromStorage());
 
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  // Persist notifications when they change
+  useEffect(() => {
+    saveNotificationsToStorage(notifications);
+  }, [notifications]);
 
   const addNotification = useCallback((data: Omit<Notification, 'id' | 'read' | 'createdAt'>) => {
     const newNotification: Notification = {

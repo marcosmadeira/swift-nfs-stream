@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { Ticket, TicketMessage, TicketPriority, TicketStatus, TicketCategory } from '@/types';
 
 interface TicketContextType {
@@ -11,7 +11,9 @@ interface TicketContextType {
 
 const TicketContext = createContext<TicketContextType | undefined>(undefined);
 
-// Mock data
+const STORAGE_KEY = 'alivee_tickets';
+
+// Mock data for initial load
 const mockTickets: Ticket[] = [
   {
     id: 'TKT-001',
@@ -88,20 +90,64 @@ const mockTickets: Ticket[] = [
   },
 ];
 
+const loadTicketsFromStorage = (): Ticket[] => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return parsed.map((t: any) => ({
+        ...t,
+        createdAt: new Date(t.createdAt),
+        updatedAt: new Date(t.updatedAt),
+        resolvedAt: t.resolvedAt ? new Date(t.resolvedAt) : undefined,
+        messages: t.messages.map((m: any) => ({
+          ...m,
+          createdAt: new Date(m.createdAt),
+        })),
+      }));
+    }
+  } catch (error) {
+    console.error('Error loading tickets from localStorage:', error);
+  }
+  return mockTickets;
+};
+
+const saveTicketsToStorage = (tickets: Ticket[]) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tickets));
+  } catch (error) {
+    console.error('Error saving tickets to localStorage:', error);
+  }
+};
+
+const generateTicketId = (tickets: Ticket[]): string => {
+  const maxId = tickets.reduce((max, ticket) => {
+    const num = parseInt(ticket.id.replace('TKT-', ''), 10);
+    return num > max ? num : max;
+  }, 0);
+  return `TKT-${String(maxId + 1).padStart(3, '0')}`;
+};
+
 export function TicketProvider({ children }: { children: ReactNode }) {
-  const [tickets, setTickets] = useState<Ticket[]>(mockTickets);
+  const [tickets, setTickets] = useState<Ticket[]>(() => loadTicketsFromStorage());
+
+  // Persist tickets when they change
+  useEffect(() => {
+    saveTicketsToStorage(tickets);
+  }, [tickets]);
 
   const addTicket = (ticketData: Omit<Ticket, 'id' | 'createdAt' | 'updatedAt' | 'messages' | 'status'>) => {
+    const ticketId = generateTicketId(tickets);
     const newTicket: Ticket = {
       ...ticketData,
-      id: `TKT-${String(tickets.length + 1).padStart(3, '0')}`,
+      id: ticketId,
       status: 'open',
       createdAt: new Date(),
       updatedAt: new Date(),
       messages: [
         {
           id: `msg-${Date.now()}`,
-          ticketId: `TKT-${String(tickets.length + 1).padStart(3, '0')}`,
+          ticketId: ticketId,
           content: ticketData.description,
           isSupport: false,
           createdAt: new Date(),
