@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { Company } from '@/types';
 
 interface CompanyContextType {
@@ -12,7 +12,10 @@ interface CompanyContextType {
 
 const CompanyContext = createContext<CompanyContextType | undefined>(undefined);
 
-// Sample data
+const STORAGE_KEY = 'alivee_companies';
+const CURRENT_COMPANY_KEY = 'alivee_current_company';
+
+// Sample data for initial load
 const initialCompanies: Company[] = [
   {
     id: '1',
@@ -43,9 +46,75 @@ const initialCompanies: Company[] = [
   },
 ];
 
+const loadCompaniesFromStorage = (): Company[] => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return parsed.map((c: any) => ({
+        ...c,
+        createdAt: new Date(c.createdAt),
+      }));
+    }
+  } catch (error) {
+    console.error('Error loading companies from localStorage:', error);
+  }
+  return initialCompanies;
+};
+
+const loadCurrentCompanyFromStorage = (companies: Company[]): Company | null => {
+  try {
+    const stored = localStorage.getItem(CURRENT_COMPANY_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      const found = companies.find(c => c.id === parsed.id);
+      if (found) return found;
+    }
+  } catch (error) {
+    console.error('Error loading current company from localStorage:', error);
+  }
+  return companies.length > 0 ? companies[0] : null;
+};
+
+const saveCompaniesToStorage = (companies: Company[]) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(companies));
+  } catch (error) {
+    console.error('Error saving companies to localStorage:', error);
+  }
+};
+
+const saveCurrentCompanyToStorage = (company: Company | null) => {
+  try {
+    if (company) {
+      localStorage.setItem(CURRENT_COMPANY_KEY, JSON.stringify({ id: company.id }));
+    } else {
+      localStorage.removeItem(CURRENT_COMPANY_KEY);
+    }
+  } catch (error) {
+    console.error('Error saving current company to localStorage:', error);
+  }
+};
+
 export function CompanyProvider({ children }: { children: React.ReactNode }) {
-  const [companies, setCompanies] = useState<Company[]>(initialCompanies);
-  const [currentCompany, setCurrentCompany] = useState<Company | null>(initialCompanies[0]);
+  const [companies, setCompanies] = useState<Company[]>(() => loadCompaniesFromStorage());
+  const [currentCompany, setCurrentCompanyState] = useState<Company | null>(() => 
+    loadCurrentCompanyFromStorage(loadCompaniesFromStorage())
+  );
+
+  // Persist companies when they change
+  useEffect(() => {
+    saveCompaniesToStorage(companies);
+  }, [companies]);
+
+  // Persist current company when it changes
+  useEffect(() => {
+    saveCurrentCompanyToStorage(currentCompany);
+  }, [currentCompany]);
+
+  const setCurrentCompany = useCallback((company: Company | null) => {
+    setCurrentCompanyState(company);
+  }, []);
 
   const addCompany = useCallback((data: Omit<Company, 'id' | 'createdAt' | 'totalFiles' | 'totalProcessed'>) => {
     const newCompany: Company = {
@@ -65,14 +134,14 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
       )
     );
     if (currentCompany?.id === id) {
-      setCurrentCompany(prev => prev ? { ...prev, ...data } : null);
+      setCurrentCompanyState(prev => prev ? { ...prev, ...data } : null);
     }
   }, [currentCompany]);
 
   const deleteCompany = useCallback((id: string) => {
     setCompanies(prev => prev.filter(company => company.id !== id));
     if (currentCompany?.id === id) {
-      setCurrentCompany(null);
+      setCurrentCompanyState(null);
     }
   }, [currentCompany]);
 
