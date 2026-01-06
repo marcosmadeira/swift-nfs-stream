@@ -9,6 +9,7 @@ import {
   FileText,
   HelpCircle,
   ShieldCheck,
+  ClipboardCheck,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -26,10 +27,11 @@ import {
 import { cn } from '@/lib/utils';
 
 const mainMenuItems = [
-  { title: 'Dashboard', url: '/', icon: LayoutDashboard },
+  { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
   { title: 'Empresas', url: '/empresas', icon: Building2 },
   { title: 'Upload', url: '/upload', icon: Upload },
   { title: 'Processamento', url: '/processamento', icon: Activity },
+  { title: 'Auditoria', url: '/auditoria', icon: ClipboardCheck },
   { title: 'Downloads', url: '/downloads', icon: Download },
 ];
 
@@ -45,8 +47,7 @@ export function AppSidebar() {
   const collapsed = state === 'collapsed';
 
   const isActive = (path: string) => {
-    if (path === '/') return location.pathname === '/';
-    return location.pathname.startsWith(path);
+    return location.pathname === path || location.pathname.startsWith(path + '/');
   };
 
   return (

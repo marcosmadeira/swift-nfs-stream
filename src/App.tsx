@@ -12,6 +12,7 @@ import Dashboard from "@/pages/Dashboard";
 import Companies from "@/pages/Companies";
 import Upload from "@/pages/Upload";
 import Processing from "@/pages/Processing";
+import Audit from "@/pages/Audit";
 import Downloads from "@/pages/Downloads";
 import Settings from "@/pages/Settings";
 import Tickets from "@/pages/Tickets";
@@ -36,6 +37,7 @@ const App = () => (
                   <Route path="/empresas" element={<Companies />} />
                   <Route path="/upload" element={<Upload />} />
                   <Route path="/processamento" element={<Processing />} />
+                  <Route path="/auditoria" element={<Audit />} />
                   <Route path="/downloads" element={<Downloads />} />
                   <Route path="/configuracoes" element={<Settings />} />
                   <Route path="/suporte" element={<Tickets />} />
