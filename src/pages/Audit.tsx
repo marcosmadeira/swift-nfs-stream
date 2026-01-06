@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { 
   FileText, Search, Filter, Download, CheckCircle2, AlertTriangle, 
-  ShieldCheck, Code, ChevronRight, Eye, FileCode 
+  ShieldCheck, ChevronRight, Eye, FileCode, FileDown, CheckCheck, XCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,11 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Checkbox } from '@/components/ui/checkbox';
 import { AuditConfidenceBadge } from '@/components/audit/AuditConfidenceBadge';
 import { AuditFieldRow } from '@/components/audit/AuditFieldRow';
 import { AICopilot } from '@/components/copilot/AICopilot';
 import { AuditedFile, AuditField } from '@/types/audit';
+import { generateAuditPDF, generateBatchAuditPDF } from '@/utils/auditPdfGenerator';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
@@ -117,6 +118,11 @@ export default function Audit() {
   const [searchQuery, setSearchQuery] = useState('');
   const [confidenceFilter, setConfidenceFilter] = useState<string>('all');
   const [activeTab, setActiveTab] = useState('fields');
+  
+  // Batch selection and approval state
+  const [selectedFields, setSelectedFields] = useState<Set<string>>(new Set());
+  const [approvedFields, setApprovedFields] = useState<Set<string>>(new Set());
+  const [rejectedFields, setRejectedFields] = useState<Set<string>>(new Set());
 
   const filteredFiles = files.filter((file) => {
     const matchesSearch = file.originalFileName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -142,19 +148,116 @@ export default function Audit() {
     return 'low';
   };
 
+  const handleSelectField = (fieldName: string, selected: boolean) => {
+    setSelectedFields(prev => {
+      const next = new Set(prev);
+      if (selected) {
+        next.add(fieldName);
+      } else {
+        next.delete(fieldName);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAll = (selected: boolean) => {
+    if (selected && selectedFile) {
+      setSelectedFields(new Set(selectedFile.fields.map(f => f.field)));
+    } else {
+      setSelectedFields(new Set());
+    }
+  };
+
   const handleApproveField = (fieldName: string) => {
+    setApprovedFields(prev => {
+      const next = new Set(prev);
+      next.add(fieldName);
+      return next;
+    });
+    setRejectedFields(prev => {
+      const next = new Set(prev);
+      next.delete(fieldName);
+      return next;
+    });
     toast({
       title: 'Campo aprovado',
-      description: `O campo "${fieldName}" foi marcado como validado.`,
+      description: `O campo foi marcado como validado.`,
     });
   };
 
   const handleRejectField = (fieldName: string) => {
+    setRejectedFields(prev => {
+      const next = new Set(prev);
+      next.add(fieldName);
+      return next;
+    });
+    setApprovedFields(prev => {
+      const next = new Set(prev);
+      next.delete(fieldName);
+      return next;
+    });
     toast({
       title: 'Campo rejeitado',
-      description: `O campo "${fieldName}" foi marcado para correção manual.`,
+      description: `O campo foi marcado para correção manual.`,
       variant: 'destructive',
     });
+  };
+
+  const handleBatchApprove = () => {
+    if (selectedFields.size === 0) {
+      toast({
+        title: 'Nenhum campo selecionado',
+        description: 'Selecione pelo menos um campo para aprovar.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    setApprovedFields(prev => {
+      const next = new Set(prev);
+      selectedFields.forEach(f => next.add(f));
+      return next;
+    });
+    setRejectedFields(prev => {
+      const next = new Set(prev);
+      selectedFields.forEach(f => next.delete(f));
+      return next;
+    });
+    
+    toast({
+      title: 'Campos aprovados em lote',
+      description: `${selectedFields.size} campos foram marcados como validados.`,
+    });
+    setSelectedFields(new Set());
+  };
+
+  const handleBatchReject = () => {
+    if (selectedFields.size === 0) {
+      toast({
+        title: 'Nenhum campo selecionado',
+        description: 'Selecione pelo menos um campo para rejeitar.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    setRejectedFields(prev => {
+      const next = new Set(prev);
+      selectedFields.forEach(f => next.add(f));
+      return next;
+    });
+    setApprovedFields(prev => {
+      const next = new Set(prev);
+      selectedFields.forEach(f => next.delete(f));
+      return next;
+    });
+    
+    toast({
+      title: 'Campos rejeitados em lote',
+      description: `${selectedFields.size} campos foram marcados para correção.`,
+      variant: 'destructive',
+    });
+    setSelectedFields(new Set());
   };
 
   const handleEditField = (fieldName: string, newValue: string) => {
@@ -171,6 +274,35 @@ export default function Audit() {
     });
   };
 
+  const handleGeneratePDF = () => {
+    if (!selectedFile) return;
+    
+    generateAuditPDF(selectedFile, approvedFields, rejectedFields);
+    toast({
+      title: 'Relatório gerado',
+      description: `O relatório de auditoria foi baixado com sucesso.`,
+    });
+  };
+
+  const handleGenerateBatchPDF = () => {
+    generateBatchAuditPDF(files);
+    toast({
+      title: 'Relatório em lote gerado',
+      description: `O relatório de auditoria de ${files.length} arquivos foi baixado.`,
+    });
+  };
+
+  // Reset selections when changing file
+  const handleSelectFile = (file: AuditedFile) => {
+    setSelectedFile(file);
+    setSelectedFields(new Set());
+    setApprovedFields(new Set());
+    setRejectedFields(new Set());
+  };
+
+  const allSelected = selectedFile ? selectedFields.size === selectedFile.fields.length : false;
+  const someSelected = selectedFields.size > 0 && !allSelected;
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Page Header */}
@@ -181,6 +313,10 @@ export default function Audit() {
             Valide os dados extraídos e verifique a confiabilidade do processamento
           </p>
         </div>
+        <Button onClick={handleGenerateBatchPDF} className="gap-2">
+          <FileDown className="h-4 w-4" />
+          Relatório em Lote
+        </Button>
       </div>
 
       {/* Stats Cards */}
@@ -281,7 +417,7 @@ export default function Audit() {
                 {filteredFiles.map((file) => (
                   <button
                     key={file.id}
-                    onClick={() => setSelectedFile(file)}
+                    onClick={() => handleSelectFile(file)}
                     className={`w-full p-4 text-left hover:bg-secondary/50 transition-colors ${
                       selectedFile?.id === file.id ? 'bg-secondary' : ''
                     }`}
@@ -342,6 +478,10 @@ export default function Audit() {
                       <Download className="h-4 w-4 mr-2" />
                       XML
                     </Button>
+                    <Button variant="default" size="sm" onClick={handleGeneratePDF}>
+                      <FileDown className="h-4 w-4 mr-2" />
+                      PDF
+                    </Button>
                   </div>
                 </div>
               </CardHeader>
@@ -369,10 +509,54 @@ export default function Audit() {
                   </TabsList>
 
                   <TabsContent value="fields" className="m-0">
-                    <ScrollArea className="h-[400px]">
+                    {/* Batch Actions Bar */}
+                    <div className="flex items-center justify-between px-4 py-2 bg-secondary/30 border-b">
+                      <div className="flex items-center gap-4">
+                        <span className="text-sm text-muted-foreground">
+                          {selectedFields.size > 0 
+                            ? `${selectedFields.size} campo(s) selecionado(s)` 
+                            : 'Selecione campos para ações em lote'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleBatchApprove}
+                          disabled={selectedFields.size === 0}
+                          className="gap-1"
+                        >
+                          <CheckCheck className="h-4 w-4 text-success" />
+                          Aprovar Selecionados
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleBatchReject}
+                          disabled={selectedFields.size === 0}
+                          className="gap-1"
+                        >
+                          <XCircle className="h-4 w-4 text-error" />
+                          Rejeitar Selecionados
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <ScrollArea className="h-[350px]">
                       <table className="w-full">
                         <thead className="bg-secondary/50 sticky top-0">
                           <tr>
+                            <th className="text-left text-xs font-medium text-muted-foreground px-4 py-2 w-10">
+                              <Checkbox
+                                checked={allSelected}
+                                ref={(el) => {
+                                  if (el) {
+                                    (el as any).indeterminate = someSelected;
+                                  }
+                                }}
+                                onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                              />
+                            </th>
                             <th className="text-left text-xs font-medium text-muted-foreground px-4 py-2">Campo</th>
                             <th className="text-left text-xs font-medium text-muted-foreground px-4 py-2">Original</th>
                             <th className="text-left text-xs font-medium text-muted-foreground px-4 py-2">Extraído</th>
@@ -386,6 +570,10 @@ export default function Audit() {
                             <AuditFieldRow
                               key={field.field}
                               field={field}
+                              isSelected={selectedFields.has(field.field)}
+                              isApproved={approvedFields.has(field.field)}
+                              isRejected={rejectedFields.has(field.field)}
+                              onSelect={handleSelectField}
                               onApprove={handleApproveField}
                               onReject={handleRejectField}
                               onEdit={handleEditField}
@@ -394,6 +582,24 @@ export default function Audit() {
                         </tbody>
                       </table>
                     </ScrollArea>
+                    
+                    {/* Status Summary */}
+                    <div className="flex items-center justify-between px-4 py-2 border-t bg-secondary/20 text-sm">
+                      <div className="flex items-center gap-4">
+                        <span className="flex items-center gap-1.5">
+                          <CheckCircle2 className="h-4 w-4 text-success" />
+                          <span>{approvedFields.size} aprovados</span>
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <XCircle className="h-4 w-4 text-error" />
+                          <span>{rejectedFields.size} rejeitados</span>
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <AlertTriangle className="h-4 w-4 text-warning" />
+                          <span>{selectedFile.fields.length - approvedFields.size - rejectedFields.size} pendentes</span>
+                        </span>
+                      </div>
+                    </div>
                   </TabsContent>
 
                   <TabsContent value="xml" className="m-0">

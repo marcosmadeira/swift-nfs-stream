@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Check, X, Edit2, AlertTriangle, Info } from 'lucide-react';
+import { Check, X, Edit2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { AuditConfidenceBadge } from './AuditConfidenceBadge';
 import { AuditField } from '@/types/audit';
@@ -9,6 +10,10 @@ import { cn } from '@/lib/utils';
 
 interface AuditFieldRowProps {
   field: AuditField;
+  isSelected: boolean;
+  isApproved: boolean;
+  isRejected: boolean;
+  onSelect: (fieldName: string, selected: boolean) => void;
   onApprove: (fieldName: string) => void;
   onReject: (fieldName: string) => void;
   onEdit: (fieldName: string, newValue: string) => void;
@@ -21,7 +26,16 @@ const sourceLabels = {
   database: 'Base de Dados',
 };
 
-export function AuditFieldRow({ field, onApprove, onReject, onEdit }: AuditFieldRowProps) {
+export function AuditFieldRow({ 
+  field, 
+  isSelected, 
+  isApproved, 
+  isRejected,
+  onSelect, 
+  onApprove, 
+  onReject, 
+  onEdit 
+}: AuditFieldRowProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(field.extractedValue);
 
@@ -37,13 +51,21 @@ export function AuditFieldRow({ field, onApprove, onReject, onEdit }: AuditField
 
   return (
     <tr className={cn(
-      'hover:bg-secondary/30 transition-colors',
-      field.needsReview && 'bg-warning/5'
+      'hover:bg-secondary/30 transition-colors group',
+      field.needsReview && 'bg-warning/5',
+      isApproved && 'bg-success/5',
+      isRejected && 'bg-error/5'
     )}>
+      <td className="px-4 py-3">
+        <Checkbox
+          checked={isSelected}
+          onCheckedChange={(checked) => onSelect(field.field, !!checked)}
+        />
+      </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
           <span className="font-medium text-sm">{field.label}</span>
-          {field.needsReview && (
+          {field.needsReview && !isApproved && !isRejected && (
             <Tooltip>
               <TooltipTrigger>
                 <AlertTriangle className="h-4 w-4 text-warning" />
@@ -53,6 +75,12 @@ export function AuditFieldRow({ field, onApprove, onReject, onEdit }: AuditField
                 {field.suggestion && <p className="text-xs mt-1">Sugestão: {field.suggestion}</p>}
               </TooltipContent>
             </Tooltip>
+          )}
+          {isApproved && (
+            <span className="text-xs px-1.5 py-0.5 bg-success/20 text-success rounded">Aprovado</span>
+          )}
+          {isRejected && (
+            <span className="text-xs px-1.5 py-0.5 bg-error/20 text-error rounded">Rejeitado</span>
           )}
         </div>
         <span className="text-xs text-muted-foreground">{field.field}</span>
@@ -116,8 +144,11 @@ export function AuditFieldRow({ field, onApprove, onReject, onEdit }: AuditField
             <TooltipTrigger asChild>
               <Button
                 size="icon"
-                variant="ghost"
-                className="h-7 w-7 hover:bg-success/20 hover:text-success"
+                variant={isApproved ? 'default' : 'ghost'}
+                className={cn(
+                  'h-7 w-7',
+                  isApproved ? 'bg-success hover:bg-success/90' : 'hover:bg-success/20 hover:text-success'
+                )}
                 onClick={() => onApprove(field.field)}
               >
                 <Check className="h-4 w-4" />
@@ -129,8 +160,11 @@ export function AuditFieldRow({ field, onApprove, onReject, onEdit }: AuditField
             <TooltipTrigger asChild>
               <Button
                 size="icon"
-                variant="ghost"
-                className="h-7 w-7 hover:bg-error/20 hover:text-error"
+                variant={isRejected ? 'default' : 'ghost'}
+                className={cn(
+                  'h-7 w-7',
+                  isRejected ? 'bg-error hover:bg-error/90' : 'hover:bg-error/20 hover:text-error'
+                )}
                 onClick={() => onReject(field.field)}
               >
                 <X className="h-4 w-4" />
